@@ -1226,7 +1226,7 @@
                 const currentTheme = document.documentElement.classList.contains('light') ? 'light' : 'dark';
                 updateThemeUI(currentTheme);
 
-                const response = await fetch('../extraction/questions.json');
+                const response = await fetch('../extraction/questions.json?v=' + new Date().getTime());
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
@@ -1244,7 +1244,8 @@
                 const firstExamId = (firstSubject && portalData[firstSubject].length > 0) ? portalData[firstSubject][0].id : null;
 
                 if (lastExamId) {
-                    switchExam(lastExamId, true);
+                    // Fix: Pass 'all' as sectionName
+                    await switchExam(lastExamId, 'all', true);
 
                     // Also ensure the subject is expanded for the last exam
                     for (const s in portalData) {
@@ -1255,7 +1256,8 @@
                         }
                     }
                 } else if (firstExamId) {
-                    switchExam(firstExamId, true);
+                    // Fix: Pass 'all' as sectionName
+                    await switchExam(firstExamId, 'all', true);
                     // Expand the first subject if it's the first time
                     if (firstSubject) {
                         collapsedSubjects.delete(firstSubject);
@@ -1371,25 +1373,62 @@
                     });
                     const examProgress = examTotalQs > 0 ? (examCompletedQs / examTotalQs) * 100 : 0;
 
-                    const link = document.createElement('a');
-                    link.id = `link-${exam.id}`;
-                    link.href = 'javascript:void(0)';
-                    link.className = `exam-link ${activeExamId === exam.id ? 'active' : ''}`;
-                    link.innerHTML = `
+                    // Add "All Questions" link
+                    const allLink = document.createElement('a');
+                    allLink.id = `link-${exam.id}-all`;
+                    allLink.href = 'javascript:void(0)';
+                    allLink.className = `exam-link ${activeExamId === exam.id && currentSectionFilter === 'all' ? 'active' : ''}`;
+                    allLink.innerHTML = `
                         <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; margin-bottom: 4px;">
-                            <span>${subAbbr} | ${formattedTest}</span>
+                            <span>All Questions <span style="font-size: 0.75rem; opacity: 0.7;">(${examTotalQs})</span></span>
                             <span style="font-size: 0.6rem; opacity: 0.6;">${Math.round(examProgress)}%</span>
                         </div>
                         <div class="progress-container" style="height: 2px; margin-top: 0; width: 100%;">
                             <div class="progress-bar complete" style="width: ${examProgress}%"></div>
                         </div>
                     `;
-                    link.title = exam.display_name; // Show full name on hover
-                    link.onclick = (e) => {
+                    allLink.onclick = (e) => {
                         e.stopPropagation();
-                        switchExam(exam.id);
+                        switchExam(exam.id, 'all');
                     };
-                    examsContainer.appendChild(link);
+                    examsContainer.appendChild(allLink);
+
+                    // Render Section Links (Sorted by count descending)
+                    const sortedSections = [...exam.sections].sort((a, b) => b.questions.length - a.questions.length);
+
+                    sortedSections.forEach(section => {
+                        // Calculate section progress
+                        let secTotal = section.questions.length;
+                        let secCompleted = 0;
+                        section.questions.forEach(q => {
+                            if (normalizedMastery[q.post_id] === 'complete') {
+                                secCompleted++;
+                            }
+                        });
+                        const secProgress = secTotal > 0 ? (secCompleted / secTotal) * 100 : 0;
+
+                        // Format name: replace hyphens with spaces and capitalize
+                        const formatName = section.name.replace(/-/g, ' ')
+                            .replace(/\b\w/g, l => l.toUpperCase());
+
+                        const secLink = document.createElement('a');
+                        secLink.id = `link-${exam.id}-${section.name.replace(/\s+/g, '_')}`;
+                        secLink.href = 'javascript:void(0)';
+                        secLink.className = `exam-link ${activeExamId === exam.id && currentSectionFilter === section.name ? 'active' : ''}`;
+                        // Indent section links slightly
+                        secLink.style.paddingLeft = "25px";
+                        secLink.innerHTML = `
+                            <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                                <span style="font-size: 0.85rem;">${formatName} <span style="font-size: 0.75rem; opacity: 0.7;">(${secTotal})</span></span>
+                                <span style="font-size: 0.6rem; opacity: 0.6;">${Math.round(secProgress)}%</span>
+                            </div>
+                        `;
+                        secLink.onclick = (e) => {
+                            e.stopPropagation();
+                            switchExam(exam.id, section.name);
+                        };
+                        examsContainer.appendChild(secLink);
+                    });
                 });
 
                 subjectDiv.appendChild(examsContainer);
@@ -1397,11 +1436,11 @@
             });
         }
 
-        function switchExam(eid, isInitial = false) {
+        function switchExam(eid, sectionName = 'all', isInitial = false) {
             activeExamId = eid;
             currentFilter = 'all'; // Reset filter when switching exams
             currentTagFilter = 'all'; // Reset tag filter
-            currentSectionFilter = 'all'; // Reset section filter
+            currentSectionFilter = sectionName; // Set section filter
             localStorage.setItem('gateLastExam', eid);
 
             if (!isInitial) {
@@ -1412,7 +1451,10 @@
             // Update sidebar links
             document.querySelectorAll('.exam-link').forEach(l => l.classList.remove('active'));
             document.getElementById('analytics-btn').classList.remove('active');
-            const activeLink = document.getElementById(`link-${eid}`);
+
+            // Activate the correct link (All or specific section)
+            let activeLinkId = `link-${eid}-${sectionName === 'all' ? 'all' : sectionName.replace(/\s+/g, '_')}`;
+            const activeLink = document.getElementById(activeLinkId);
             if (activeLink) activeLink.classList.add('active');
 
             // Find exam data
@@ -1449,14 +1491,20 @@
             const sortedTags = Object.keys(tagCounts).sort();
 
             const main = document.getElementById('main-content');
-            const cleanTitle = examData.display_name.includes('|')
-                ? examData.display_name.split('|')[1].trim()
-                : examData.display_name;
+
+            // Determine dynamic title
+            let displayTitle = subjectName;
+            let displaySubtitle = 'All Questions';
+
+            if (currentSectionFilter !== 'all') {
+                displayTitle = currentSectionFilter.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                displaySubtitle = subjectName;
+            }
 
             main.innerHTML = `
                 <div class="page-header">
-                    <div class="page-subject">${subjectName}</div>
-                    <div class="page-title">${cleanTitle}</div>
+                    <div class="page-subject">${displaySubtitle}</div>
+                    <div class="page-title">${displayTitle}</div>
                     <div class="d-flex flex-wrap gap-4 align-items-center mb-3">
                         <div class="small fw-bold" style="color: var(--text-muted); letter-spacing: 0.05em; text-transform: uppercase;">
                             COUNT: <span style="color: var(--text-main); text-transform: none; letter-spacing: normal;">${examData.total_qs} QUESTIONS</span>
@@ -1473,7 +1521,7 @@
                     </div>
                     ${examData.syllabus ? `
                         <div class="syllabus-info mb-4" style="background: rgba(56, 189, 248, 0.05); border: 1px solid var(--border); border-radius: 12px; padding: 15px;">
-                            <div class="small fw-bold mb-1" style="color: var(--text-muted); letter-spacing: 0.05em; text-transform: uppercase;">Syllabus / Coverage:</div>
+                            <div class="small fw-bold mb-1" style="color: var(--text-muted); letter-spacing: 0.05em; text-transform: uppercase;">Syllabus:</div>
                             <div style="color: var(--text-main); font-size: 0.95rem; line-height: 1.5;">${examData.syllabus}</div>
                         </div>
                     ` : ''}

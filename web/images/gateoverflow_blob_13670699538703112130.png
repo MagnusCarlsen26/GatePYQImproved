@@ -1,0 +1,490 @@
+
+<!-- saved from url=(0107)https://web.archive.org/web/20210506092429/http://web.cs.iastate.edu/~prabhu/Tutorial/PIPELINE/forward.html -->
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><script type="text/javascript" src="./Forwarding_files/bundle-playback.js" charset="utf-8"></script>
+<script type="text/javascript" src="./Forwarding_files/wombat.js" charset="utf-8"></script>
+<script type="text/javascript">
+  __wm.init("https://web.archive.org/web");
+  __wm.wombat("http://web.cs.iastate.edu/~prabhu/Tutorial/PIPELINE/forward.html","20210506092429","https://web.archive.org/","web","/_static/",
+	      "1620293069");
+</script>
+<link rel="stylesheet" type="text/css" href="./Forwarding_files/banner-styles.css">
+<link rel="stylesheet" type="text/css" href="./Forwarding_files/iconochive.css">
+<!-- End Wayback Rewrite JS Include -->
+
+  <title>Forwarding</title>
+</head>
+<body text="#000000" bgcolor="#C0C0C0" link="#0033CC" vlink="#006699" alink="#996699" background="./Forwarding_files/whtmarb.gif"><!-- BEGIN WAYBACK TOOLBAR INSERT -->
+<style type="text/css">
+body {
+  margin-top:0 !important;
+  padding-top:0 !important;
+  /*min-width:800px !important;*/
+}
+</style>
+<script>__wm.rw(0);</script>
+<div id="wm-ipp-base" lang="en" style="display: block; direction: ltr;">
+</div><div id="wm-ipp-print">The Wayback Machine - https://web.archive.org/web/20210506092429/http://web.cs.iastate.edu/~prabhu/Tutorial/PIPELINE/forward.html</div>
+<script type="text/javascript">//<![CDATA[
+__wm.bt(700,27,25,2,"web","http://web.cs.iastate.edu/~prabhu/Tutorial/PIPELINE/forward.html","20210506092429",1996,"/_static/",["/_static/css/banner-styles.css?v=S1zqJCYt","/_static/css/iconochive.css?v=qtvMKcIJ"], false);
+  __wm.rw(1);
+//]]></script>
+<!-- END WAYBACK TOOLBAR INSERT -->
+<p>
+<a href="https://web.archive.org/web/20210506092429/http://web.cs.iastate.edu/~prabhu/Tutorial/PIPELINE/dataHaz.html">
+ <img src="./Forwarding_files/cylarrw.gif" height="31" width="31">
+</a>
+<a href="https://web.archive.org/web/20210506092429/http://web.cs.iastate.edu/~prabhu/Tutorial/title.html">
+ <img src="./Forwarding_files/cyuarrw.gif" height="31" width="31">
+</a>
+<a href="https://web.archive.org/web/20210506092429/http://web.cs.iastate.edu/~prabhu/Tutorial/PIPELINE/dataHazClass.html">
+ <img src="./Forwarding_files/cyrarrw.gif" height="31" width="31">
+</a>
+
+</p><center><img src="./Forwarding_files/blue002.gif" width="560" height="11" border="0">
+<h1><b>
+<font face="Times New Roman,Times" color="#637CFF" size="+4">
+Forwarding
+</font>
+</b></h1>
+<img src="./Forwarding_files/blue002.gif" width="560" height="11" border="0">
+</center>
+
+<p>The problem with <a href="https://web.archive.org/web/20210506092429/http://web.cs.iastate.edu/~prabhu/Tutorial/PIPELINE/dataHaz.html">data hazards</a>, introduced
+by this sequence of instructions can be solved with a simple hardware technique
+called <b><i><font color="#006699">forwarding</font></i></b>.
+<br>&nbsp;
+</p><center><table border="" cols="9" width="80%" nosave="">
+<tbody><tr nosave="">
+<td nosave="">&nbsp;</td>
+
+<td width="25%" nosave="">&nbsp;</td>
+
+<td>1</td>
+
+<td>2</td>
+
+<td>3</td>
+
+<td>4</td>
+
+<td><font color="#000000">5</font></td>
+
+<td>6</td>
+
+<td>7</td>
+</tr>
+
+<tr nosave="">
+<td nosave="">ADD</td>
+
+<td><b><font color="#006699">R1</font></b>, R2, R3</td>
+
+<td>IF</td>
+
+<td>ID</td>
+
+<td>EX</td>
+
+<td>MEM</td>
+
+<td nosave=""><b><font color="#000000">WB</font></b></td>
+
+<td>&nbsp;</td>
+
+<td>&nbsp;</td>
+</tr>
+
+<tr nosave="">
+<td nosave="">SUB</td>
+
+<td nosave="">R4, R5, <b><font color="#006699">R1</font></b></td>
+
+<td>&nbsp;</td>
+
+<td>IF</td>
+
+<td><b><font color="#CC0000">ID<sub>sub</sub></font></b></td>
+
+<td>EX</td>
+
+<td>MEM</td>
+
+<td>WB</td>
+
+<td>&nbsp;</td>
+</tr>
+
+<tr>
+<td nosave="">AND</td>
+
+<td>R6, <b><font color="#006699">R1</font>,</b> R7</td>
+
+<td>&nbsp;</td>
+
+<td>&nbsp;</td>
+
+<td>IF</td>
+
+<td><b><font color="#CC0000">ID<sub>and</sub></font></b></td>
+
+<td>EX</td>
+
+<td>MEM</td>
+
+<td>WB</td>
+</tr>
+</tbody></table></center>
+<br>The key insight in forwarding is that the result is not really needed by
+SUB until after the ADD actually produces it. The only problem is to make
+it available for SUB when it needs it.
+
+<p>If the result can be moved from where the ADD produces it (EX/MEM register),
+to where the SUB needs it (ALU input latch), then the need for a stall can
+be avoided.
+<br>Using this observation , forwarding works as follows:
+</p><blockquote><img src="./Forwarding_files/blueball_1.gif" height="15" width="20">The ALU result
+from the EX/MEM register is always <b><i><font color="#006699">fed back</font></i></b>
+to the ALU input latches.
+<br><img src="./Forwarding_files/blueball_1.gif" height="15" width="20">If the forwarding hardware
+detects that the previous ALU operation has written the register corresponding
+to the source for the current ALU operation, <b><i><font color="#006699">control
+logic</font></i></b> selects the forwarded result as the ALU input rather
+than the value read from the register file.</blockquote>
+
+<center><table width="100%" nosave="">
+<tbody><tr nosave="">
+<td nosave=""><applet code="ForwardControl.class" alt="This is the place for my applet! Please, enable you
+               Java to see it!  :)" width="400" height="430">
+</applet></td>
+<td><b>Forwarding of results to the ALU requires the additional of three 
+extra inputs on each ALU multiplexer and the addtion of three paths to
+the new inputs.</b>
+<p>
+<br>The paths correspond to a forwarding of:<br>(a) the ALU output at the end
+of EX,<br>(b) the ALU output at the end of MEM, and<br>(c) 
+the memory output at the end of MEM.</p></td>
+</tr>
+</tbody></table></center>
+
+<p>Without forwarding our example will execute correctly with stalls:
+<br>&nbsp;
+</p><center><table border="" cols="11" width="80%" nosave="">
+<tbody><tr nosave="">
+<td nosave="">&nbsp;</td>
+
+<td width="25%" nosave="">&nbsp;</td>
+
+<td>1</td>
+
+<td>2</td>
+
+<td>3</td>
+
+<td>4</td>
+
+<td><font color="#000000">5</font></td>
+
+<td>6</td>
+
+<td>7</td>
+
+<td>8</td>
+
+<td>9</td>
+</tr>
+
+<tr nosave="">
+<td nosave="">ADD</td>
+
+<td><b><font color="#006699">R1</font></b>, R2, R3</td>
+
+<td>IF</td>
+
+<td>ID</td>
+
+<td>EX</td>
+
+<td>MEM</td>
+
+<td nosave=""><b><font color="#000000">WB</font></b></td>
+
+<td>&nbsp;</td>
+
+<td>&nbsp;</td>
+
+<td>&nbsp;</td>
+
+<td>&nbsp;</td>
+</tr>
+
+<tr nosave="">
+<td nosave="">SUB</td>
+
+<td nosave="">R4, R5, <b><font color="#006699">R1</font></b></td>
+
+<td>&nbsp;</td>
+
+<td>IF</td>
+
+<td><b><font color="#990000">stall</font></b></td>
+
+<td><b><font color="#990000">stall</font></b></td>
+
+<td><b><font color="#CC0000">ID<sub>sub</sub></font></b></td>
+
+<td>EX</td>
+
+<td>MEM&nbsp;</td>
+
+<td>WB</td>
+
+<td>&nbsp;</td>
+</tr>
+
+<tr>
+<td nosave="">AND</td>
+
+<td>R6, <b><font color="#006699">R1</font>,</b> R7</td>
+
+<td>&nbsp;</td>
+
+<td>&nbsp;</td>
+
+<td><b><font color="#990000">stall</font></b></td>
+
+<td><b><font color="#990000">stall</font></b></td>
+
+<td>IF</td>
+
+<td><b><font color="#CC0000">ID<sub>and</sub></font></b></td>
+
+<td>EX</td>
+
+<td>MEM&nbsp;</td>
+
+<td>WB</td>
+</tr>
+</tbody></table></center>
+
+
+<p>As our example shows, we need to forward results not only from the immediately
+previous instruction, but possibly from an instruction that started three
+cycles earlier. Forwarding can be arranged from MEM/WB latch to ALU input
+also.&nbsp; Using those forwarding paths the code sequence can be executed
+without stalls:
+<br>&nbsp;
+</p><center><table border="" cols="9" width="80%" nosave="">
+<tbody><tr nosave="">
+<td nosave="">&nbsp;</td>
+
+<td width="25%" nosave="">&nbsp;</td>
+
+<td>1</td>
+
+<td>2</td>
+
+<td>3</td>
+
+<td>4</td>
+
+<td><font color="#000000">5</font></td>
+
+<td>6</td>
+
+<td>7</td>
+</tr>
+
+<tr nosave="">
+<td nosave="">ADD</td>
+
+<td><b><font color="#006699">R1</font></b>, R2, R3</td>
+
+<td>IF</td>
+
+<td>ID</td>
+
+<td><b><font color="#CC0000">EX</font></b><sub><font color="#CC0000"><b>add</b></font></sub></td>
+
+<td><b><font color="#993399">MEM<sub>add</sub></font></b></td>
+
+<td nosave=""><font color="#000000">WB</font></td>
+
+<td>&nbsp;</td>
+
+<td>&nbsp;</td>
+</tr>
+
+<tr nosave="">
+<td nosave="">SUB</td>
+
+<td nosave="">R4, R5, <b><font color="#006699">R1</font></b></td>
+
+<td>&nbsp;</td>
+
+<td>IF</td>
+
+<td><font color="#000000">ID</font></td>
+
+<td><b><font color="#CC0000">EX<sub>sub</sub></font></b></td>
+
+<td>MEM</td>
+
+<td>WB</td>
+
+<td>&nbsp;</td>
+</tr>
+
+<tr>
+<td nosave="">AND</td>
+
+<td>R6, <b><font color="#006699">R1</font>,</b> R7</td>
+
+<td>&nbsp;</td>
+
+<td>&nbsp;</td>
+
+<td>IF</td>
+
+<td><font color="#000000">ID</font></td>
+
+<td><b><font color="#993399">EX<sub>and</sub></font></b></td>
+
+<td>MEM</td>
+
+<td>WB</td>
+</tr>
+</tbody></table></center>
+
+
+<p>The first forwarding is for value of <b><font color="#006699">R1</font></b>
+from <b><font color="#CC0000">EX<sub>add</sub></font></b> to <b><font color="#CC0000">EX<sub>sub</sub></font></b>
+.
+<br>The second forwarding is also for value of <b><font color="#006699">R1</font></b>
+from <b><font color="#993399">MEM<sub>add </sub></font></b>to <b><font color="#993399">EX<sub>and</sub></font></b><font color="#000000">.</font>
+<br><font color="#000000">This code now can be executed without stalls.</font>
+
+</p><p><font color="#000000">Forwarding can be generalized to include passing
+the result directly to the functional unit that requires it: a result is
+forwarded from the output of one unit to the input of another, rather than
+just from the result of a unit to the input of the same unit.</font>
+<br>&nbsp;
+<br><b><font size="+1">One more Example</font></b>
+<br>To prevent a stall in this example, we would need to forward the values
+of R1 and R4 from the pipeline registers to the ALU and data memory inputs.
+<br>&nbsp;
+</p><center><table border="" cols="9" width="80%" nosave="">
+<tbody><tr nosave="">
+<td nosave="">&nbsp;</td>
+
+<td width="25%" nosave="">&nbsp;</td>
+
+<td>1</td>
+
+<td>2</td>
+
+<td>3</td>
+
+<td>4</td>
+
+<td><font color="#000000">5</font></td>
+
+<td>6</td>
+
+<td>7</td>
+</tr>
+
+<tr nosave="">
+<td nosave="">ADD</td>
+
+<td><b><font color="#006699">R1</font></b>, R2, R3</td>
+
+<td>IF</td>
+
+<td>ID</td>
+
+<td><b><font color="#006699">EX</font></b><sub><font color="#006699"><b>add</b></font></sub></td>
+
+<td><b><font color="#993399">MEM<sub>add</sub></font></b></td>
+
+<td nosave=""><font color="#000000">WB</font></td>
+
+<td>&nbsp;</td>
+
+<td>&nbsp;</td>
+</tr>
+
+<tr nosave="">
+<td nosave="">LW</td>
+
+<td nosave=""><b><font color="#3366FF">R4</font></b>, <b><font color="#006699">d (R1)</font></b></td>
+
+<td>&nbsp;</td>
+
+<td>IF</td>
+
+<td><font color="#000000">ID</font></td>
+
+<td><b><font color="#006699">EX<sub>lw</sub></font></b></td>
+
+<td><b><font color="#3366FF">MEM<sub>lw</sub></font></b></td>
+
+<td>WB</td>
+
+<td>&nbsp;</td>
+</tr>
+
+<tr>
+<td nosave="">SW</td>
+
+<td> <b><font color="#3366FF">R4</font></b>,<b><font color="#006699">12(R1)</font></b></td>
+
+<td>&nbsp;</td>
+
+<td>&nbsp;</td>
+
+<td>IF</td>
+
+<td><font color="#000000">ID</font></td>
+
+<td><b><font color="#993399">EX<sub>sw</sub></font></b></td>
+
+<td><b><font color="#3366FF">MEM<sub>sw</sub></font></b></td>
+
+<td>WB</td>
+</tr>
+</tbody></table></center>
+
+
+<p>Stores require an operand during MEM, and forwarding of that operand
+is shown here.
+<br>The first forwarding is for value of <b><font color="#006699">R1</font></b>
+from <b><font color="#006699">EX</font></b><sub><font color="#006699"><b>add</b></font></sub> to <b><font color="#006699">EX<sub>lw</sub></font></b>
+.
+<br>The second forwarding is also for value of <b><font color="#006699">R1</font></b>
+from <b><font color="#993399">MEM<sub>add </sub></font></b>to <b><font color="#993399">EX<sub>sw</sub></font></b><font color="#000000">.</font>
+<br><font color="#000000">The third forwarding is for value of </font><b><font color="#3366FF">R4
+</font><font color="#000000">from</font><font color="#3366FF"> MEM<sub>lw
+</sub></font></b><font color="#000000">to</font><b><font color="#3366FF">
+MEM<sub>sw</sub></font></b>.
+<br>Observe that the SW instruction is storing the value of R4 into a memory location computed by adding the displacement 12
+to the value contained in register R1. This effective address computation is done in the ALU during the EX stage of the SW instruction.
+The value to be stored (R4 in this case) is needed only in the MEM stage as an input to Data Memory. Thus the value of R1
+is forwarded to the EX stage for effective address computation and is needed earlier in time than the value of R4 which is
+forwarded to the input of Data Memory in the MEM stage. 
+<br>So forwarding takes place from "left-to-right" in time, but operands are not ALWAYS forwarded to the EX stage - it
+depends on the instruction and the point in the Datapath where the operand is needed. Of course, hardware support is
+necessary to support data forwarding.
+<br><br>
+<a href="https://web.archive.org/web/20210506092429/http://web.cs.iastate.edu/~prabhu/Tutorial/PIPELINE/dataHaz.html">
+ <img src="./Forwarding_files/cylarrw.gif" height="31" width="31">
+</a>
+<a href="https://web.archive.org/web/20210506092429/http://web.cs.iastate.edu/~prabhu/Tutorial/title.html">
+ <img src="./Forwarding_files/cyuarrw.gif" height="31" width="31">
+</a>
+<a href="https://web.archive.org/web/20210506092429/http://web.cs.iastate.edu/~prabhu/Tutorial/PIPELINE/dataHazClass.html">
+ <img src="./Forwarding_files/cyrarrw.gif" height="31" width="31">
+</a>
+
+
+
+</p></body></html>

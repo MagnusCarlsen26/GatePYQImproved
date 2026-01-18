@@ -11,7 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function fetchData() {
     try {
-        const response = await fetch('../extraction/questions.json');
+        const response = await fetch(`../extraction/questions.json?v=${new Date().getTime()}`);
         if (!response.ok) {
             throw new Error("JSON not found");
         }
@@ -71,6 +71,37 @@ function renderQuestions(questions) {
     const container = document.getElementById('questions-container');
     container.innerHTML = '';
 
+    // Helper to replace external image URLs with local paths
+    const processContent = (htmlContent) => {
+        if (!htmlContent) return '';
+        // Create a temporary element to parse HTML
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = htmlContent;
+
+        // Find all images
+        const images = tempDiv.getElementsByTagName('img');
+        for (let img of images) {
+            const src = img.getAttribute('src');
+            // Check for GateOverflow blob URL pattern
+            // Pattern: https://gateoverflow.in/?qa=blob&qa_blobid=...
+            if (src && src.includes('gateoverflow.in') && src.includes('qa_blobid=')) {
+                try {
+                    const urlParams = new URLSearchParams(src.split('?')[1]);
+                    const blobId = urlParams.get('qa_blobid');
+                    if (blobId) {
+                        // Rewrite to local path
+                        img.setAttribute('src', `images/gateoverflow_blob_${blobId}.png`);
+                        // Add some default styling/classes if needed
+                        img.classList.add('question-image');
+                    }
+                } catch (e) {
+                    console.error('Error parsing image URL:', src, e);
+                }
+            }
+        }
+        return tempDiv.innerHTML;
+    };
+
     questions.forEach((q, index) => {
         const card = document.createElement('div');
         card.className = 'question-card tex2jax_process';
@@ -88,13 +119,15 @@ function renderQuestions(questions) {
             optionsHtml = Object.entries(q.options).map(([label, text]) => `
                 <div class="option-item">
                     <span class="option-label">${label}</span>
-                    <div class="option-content">${text}</div>
+                    <div class="option-content">${processContent(text)}</div>
                 </div>
             `).join('');
         }
 
         // Determine content to display (Metadata might just have title, full questions have 'question')
-        const content = q.question || `<h3>${q.title}</h3><p>(Full question content not available in metadata view)</p>`;
+        let rawContent = q.question || `<h3>${q.title}</h3><p>(Full question content not available in metadata view)</p>`;
+        const content = processContent(rawContent);
+        const solutionContent = processContent(q.solution || 'No solution available.');
 
         card.innerHTML = `
             <div class="card-header">
@@ -105,7 +138,7 @@ function renderQuestions(questions) {
                     ${q.question_num ? `<span class="qnum-badge">Q.${q.question_num}</span>` : ''}
                 </div>
                 <div class="meta-row-title">
-                     <strong>${q.title || ''}</strong>
+                    <strong>${q.title || ''}</strong>
                 </div>
                 <div class="tags">
                     ${q.subtopic ? `<span class="subtopic-tag">${q.subtopic}</span>` : ''}
@@ -124,7 +157,7 @@ function renderQuestions(questions) {
             <div class="solution-panel" id="sol-${q.post_id}">
                 <div class="answer-badge">Correct Answer: ${q.answer || 'N/A'}</div>
                 <div class="solution-content">
-                    ${q.solution || 'No solution available.'}
+                    ${solutionContent}
                 </div>
             </div>
         `;
