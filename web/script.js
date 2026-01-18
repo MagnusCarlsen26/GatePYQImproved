@@ -108,7 +108,7 @@ function renderQuestions(questions) {
                      <strong>${q.title || ''}</strong>
                 </div>
                 <div class="tags">
-                    ${q.subtopics && Array.isArray(q.subtopics) ? q.subtopics.map(t => `<span class="subtopic-tag">${t}</span>`).join('') : ''}
+                    ${q.subtopic ? `<span class="subtopic-tag">${q.subtopic}</span>` : ''}
                     ${tagsHtml}
                 </div>
             </div>
@@ -186,14 +186,14 @@ function renderReviewTable(dataToRender) {
     tableBody.innerHTML = '';
     dataToRender.forEach(item => {
         const row = document.createElement('tr');
-        const subtopicsHtml = (item.subtopics || []).map(t => `<span class="tag">${t}</span>`).join('');
+        const subtopicHtml = item.subtopic ? `<span class="tag">${item.subtopic}</span>` : '';
 
         row.innerHTML = `
             <td><a href="../scraped_html/cleaned/${item.post_id}.html" class="link" target="_blank">${item.post_id}</a></td>
             <td>${item.year || '-'}</td>
             <td>${item.question_num || '-'}</td>
             <td>${item.subject || 'Other'}</td>
-            <td>${subtopicsHtml}</td>
+            <td>${subtopicHtml}</td>
             <td><small>${item.title}</small></td>
         `;
         tableBody.appendChild(row);
