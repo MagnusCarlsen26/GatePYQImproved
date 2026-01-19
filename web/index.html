@@ -1597,15 +1597,14 @@
 
 
                         <select id="tag-filter-dropdown" class="tag-filter-select" onchange="setTagFilter(this.value)">
-                            <option value="all">🏷️ All Tags (${examData.total_qs})</option>
-                            <option value="starred" ${currentTagFilter === 'starred' ? 'selected' : ''}>⭐ Starred (${starredCount})</option>
-                            ${sortedTags.map(t => `<option value="${t}" ${currentTagFilter === t ? 'selected' : ''}>${t} (${tagCounts[t]})</option>`).join('')}
+                            <option value="all">🏷️ All Tags</option>
                         </select>
                     </div>
                 </div>
                 <div id="questions-list"></div>
             `;
 
+            updateTagDropdown();
             updateFilterCounts();
             renderQuestions();
         }
@@ -1623,6 +1622,7 @@
 
             const masteryData = JSON.parse(localStorage.getItem('gateMastery') || '{}');
             const starsData = JSON.parse(localStorage.getItem('gateStars') || '{}');
+            const tagsData = JSON.parse(localStorage.getItem('gateTags') || '{}');
             const normalizedMastery = Array.isArray(masteryData)
                 ? masteryData.reduce((acc, id) => ({ ...acc, [id]: 'complete' }), {})
                 : masteryData;
