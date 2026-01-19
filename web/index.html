@@ -1629,13 +1629,30 @@
 
             let counts = { all: 0, complete: 0, partial: 0, none: 0, starred: 0 };
 
-            examData.sections.forEach(section => {
+            const sectionsToShow = currentSectionFilter === 'all'
+                ? examData.sections
+                : examData.sections.filter(s => s.name === currentSectionFilter);
+
+            sectionsToShow.forEach(section => {
                 section.questions.forEach(q => {
-                    counts.all++;
                     const qid = q.post_id;
-                    const status = normalizedMastery[qid] || 'none';
-                    counts[status]++;
-                    if (starsData[qid]) counts.starred++;
+                    const isStarred = starsData[qid];
+                    const qTags = tagsData[qid] || [];
+
+                    // Filter by tag for pill counts
+                    let matchesTag = true;
+                    if (currentTagFilter === 'starred') {
+                        matchesTag = isStarred;
+                    } else if (currentTagFilter !== 'all') {
+                        matchesTag = qTags.includes(currentTagFilter);
+                    }
+
+                    if (matchesTag) {
+                        counts.all++;
+                        const status = normalizedMastery[qid] || 'none';
+                        counts[status]++;
+                        if (isStarred) counts.starred++;
+                    }
                 });
             });
 
@@ -2175,8 +2192,12 @@
             const starsData = JSON.parse(localStorage.getItem('gateStars') || '{}');
             const tagCounts = {};
             let starredCount = 0;
+            let sectionTotal = 0;
+            const sectionsToShow = currentSectionFilter === 'all'
+                ? examData.sections
+                : examData.sections.filter(s => s.name === currentSectionFilter);
 
-            examData.sections.forEach(section => {
+            sectionsToShow.forEach(section => {
                 section.questions.forEach(q => {
                     const qid = q.post_id;
                     const qTags = tagsData[qid] || [];
@@ -2184,13 +2205,14 @@
                         tagCounts[t] = (tagCounts[t] || 0) + 1;
                     });
                     if (starsData[qid]) starredCount++;
+                    sectionTotal++;
                 });
             });
             const sortedTags = Object.keys(tagCounts).sort();
 
             const currentValue = dropdown.value;
             dropdown.innerHTML = `
-                < option value = "all" >🏷️ All Tags(${examData.total_qs})</option >
+                <option value="all">🏷️ All Tags (${sectionTotal})</option>
                     <option value="starred" ${currentValue === 'starred' ? 'selected' : ''}>⭐ Starred (${starredCount})</option>
                 ${sortedTags.map(t => `<option value="${t}" ${t === currentValue ? 'selected' : ''}>${t} (${tagCounts[t]})</option>`).join('')}
             `;
