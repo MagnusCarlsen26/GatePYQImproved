@@ -1595,12 +1595,8 @@
                             </div>
                         </div>
 
-                        <select class="tag-filter-select" onchange="setSectionFilter(this.value)" style="background: rgba(168, 85, 247, 0.1); border-color: rgba(168, 85, 247, 0.3);">
-                            <option value="all">📂 All Sections (${examData.total_qs})</option>
-                            ${examData.sections.map(s => `<option value="${s.name}" ${currentSectionFilter === s.name ? 'selected' : ''}>${s.name} (${s.questions.length})</option>`).join('')}
-                        </select>
 
-                        <select class="tag-filter-select" onchange="setTagFilter(this.value)">
+                        <select id="tag-filter-dropdown" class="tag-filter-select" onchange="setTagFilter(this.value)">
                             <option value="all">🏷️ All Tags (${examData.total_qs})</option>
                             <option value="starred" ${currentTagFilter === 'starred' ? 'selected' : ''}>⭐ Starred (${starredCount})</option>
                             ${sortedTags.map(t => `<option value="${t}" ${currentTagFilter === t ? 'selected' : ''}>${t} (${tagCounts[t]})</option>`).join('')}
@@ -1793,7 +1789,11 @@
                             ${optionsHtml}
                             <div class="ans-area" id="ans-${q.post_id}">
                                 <div style="font-size: 0.7rem; color: var(--success); opacity: 0.8; margin-bottom: 5px;">CORRECT SOLUTION:</div>
-                                ${localizeImageUrls(q.answer)}
+                                <div class="mb-3">${localizeImageUrls(q.answer)}</div>
+                                ${q.solution ? `
+                                    <div style="font-size: 0.7rem; color: var(--accent); opacity: 0.8; margin-top: 15px; margin-bottom: 5px; border-top: 1px solid rgba(168, 85, 247, 0.2); padding-top: 10px;">EXPLANATION:</div>
+                                    <div class="explanation-content">${localizeImageUrls(q.solution)}</div>
+                                ` : ''}
                             </div>
                             <div class="notes-area" id="notes-area-${q.post_id}">
                                 <div style="font-size: 0.7rem; color: var(--accent); opacity: 0.8; margin-bottom: 10px;">YOUR NOTES:</div>
@@ -2157,7 +2157,7 @@
         }
 
         function updateTagDropdown() {
-            const dropdown = document.querySelector('.tag-filter-select');
+            const dropdown = document.getElementById('tag-filter-dropdown');
             if (!dropdown) return;
 
             // Find current exam data
