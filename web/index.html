@@ -695,6 +695,52 @@
             border-radius: 8px;
         }
 
+        /* --- Options Styling --- */
+        .options-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin: 40px 0 45px;
+        }
+
+        .option-item {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 12px 18px;
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+        }
+
+        .option-label {
+            background: var(--accent);
+            color: #020617;
+            width: 26px;
+            height: 26px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 0.8rem;
+            flex-shrink: 0;
+            margin-top: 2px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .option-content {
+            font-size: 1rem;
+            line-height: 1.6;
+            color: var(--text-main);
+        }
+
+        @media (max-width: 768px) {
+            .options-container {
+                grid-template-columns: 1fr;
+            }
+        }
+
         .badge-mark {
             background: rgba(56, 189, 248, 0.1);
             color: var(--accent);
@@ -1149,10 +1195,14 @@
 
         function getQuestionType(q) {
             const ans = q.answer.toString().trim().toLowerCase();
-            if (ans.includes(';')) return { label: 'MSQ', class: 'type-msq' };
-            // Check if it's a single letter (a, b, c, d)
-            if (/^[a-d]$/.test(ans)) return { label: 'MCQ', class: 'type-mcq' };
-            // Otherwise it's likely a number or range
+            const hasOptions = q.options && Object.keys(q.options).length > 0;
+
+            if (ans.includes(';') || (hasOptions && ans.length > 1 && /^[a-d,; ]+$/.test(ans))) {
+                return { label: 'MSQ', class: 'type-msq' };
+            }
+            if (hasOptions || /^[a-d]$/.test(ans)) {
+                return { label: 'MCQ', class: 'type-mcq' };
+            }
             return { label: 'NAT', class: 'type-nat' };
         }
 
@@ -1507,10 +1557,10 @@
                     <div class="page-title">${displayTitle}</div>
                     <div class="d-flex flex-wrap gap-4 align-items-center mb-3">
                         <div class="small fw-bold" style="color: var(--text-muted); letter-spacing: 0.05em; text-transform: uppercase;">
-                            COUNT: <span style="color: var(--text-main); text-transform: none; letter-spacing: normal;">${examData.total_qs} QUESTIONS</span>
+                            COUNT: <span id="header-count" style="color: var(--text-main); text-transform: none; letter-spacing: normal;">${examData.total_qs} QUESTIONS</span>
                         </div>
                         <div class="small fw-bold" style="color: var(--text-muted); letter-spacing: 0.05em; text-transform: uppercase;">
-                            WEIGHT: <span style="color: var(--text-main); text-transform: none; letter-spacing: normal;">${examData.total_marks} MARKS</span>
+                            WEIGHT: <span id="header-weight" style="color: var(--text-main); text-transform: none; letter-spacing: normal;">${examData.total_marks} MARKS</span>
                         </div>
                         ${examData.test_link ? `
                             <a href="${examData.test_link}" target="_blank" class="btn-action btn-reveal" style="text-decoration: none; display: inline-flex; align-items: center; gap: 8px; padding: 6px 16px; margin-left: auto;">
@@ -1651,6 +1701,7 @@
                 : masteryData;
 
             let visibleCount = 0;
+            let visibleWeight = 0;
 
             // Filter sections based on section filter
             const sectionsToShow = currentSectionFilter === 'all'
@@ -1695,12 +1746,29 @@
 
                     filteredQuestions.forEach(q => {
                         visibleCount++;
+                        visibleWeight += parseFloat(q.award || 0);
                         const qid = q.post_id;
                         const status = normalizedMastery[qid] || 'none';
                         const note = notesData[qid] || '';
                         const isStarred = starsData[qid] || false;
                         const tags = tagsData[qid] || [];
                         const qType = getQuestionType(q);
+
+                        // Render Options if they exist
+                        let optionsHtml = '';
+                        if (q.options && Object.keys(q.options).length > 0) {
+                            optionsHtml = `
+                                <div class="options-container mt-4">
+                                    ${Object.entries(q.options).map(([label, text]) => `
+                                        <div class="option-item">
+                                            <span class="option-label">${label}</span>
+                                            <div class="option-content">${localizeImageUrls(text)}</div>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            `;
+                        }
+
                         const qCard = document.createElement('div');
                         qCard.className = `q-card status-${status}`;
                         qCard.id = `q-card-${q.post_id}`;
@@ -1722,6 +1790,7 @@
                                 </div>
                             </div>
                             <div class="q-body">${localizeImageUrls(q.text)}</div>
+                            ${optionsHtml}
                             <div class="ans-area" id="ans-${q.post_id}">
                                 <div style="font-size: 0.7rem; color: var(--success); opacity: 0.8; margin-bottom: 5px;">CORRECT SOLUTION:</div>
                                 ${localizeImageUrls(q.answer)}
@@ -1780,7 +1849,7 @@
 
             if (visibleCount === 0) {
                 qList.innerHTML = `
-                    <div style="text-align: center; padding: 60px 20px; color: var(--text-muted);">
+                    <div style="text-align: center; padding: 60px 20px; color: var(--text-muted); opacity: 0.7;">
                         <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="currentColor" class="bi bi-filter" viewBox="0 0 16 16" style="opacity: 0.2; margin-bottom: 20px;">
                             <path d="M6 10.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1h-3a.5.5 0 0 1-.5-.5zm-2-3a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7a.5.5 0 0 1-.5-.5zm-2-3a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5z"/>
                         </svg>
@@ -1789,6 +1858,12 @@
                     </div>
                 `;
             }
+
+            // Update Header Counts
+            const hCount = document.getElementById('header-count');
+            const hWeight = document.getElementById('header-weight');
+            if (hCount) hCount.textContent = `${visibleCount} QUESTIONS`;
+            if (hWeight) hWeight.textContent = `${visibleWeight} MARKS`;
 
             // Re-render MathJax
             if (window.MathJax && window.MathJax.typesetPromise) {
@@ -1879,7 +1954,7 @@
 
             const main = document.getElementById('main-content');
             main.innerHTML = `
-                <div class="page-header d-flex justify-content-between align-items-center flex-wrap gap-3">
+                < div class="page-header d-flex justify-content-between align-items-center flex-wrap gap-3" >
                     <div>
                         <div class="page-subject">Performance Overview</div>
                         <div class="page-title" style="margin-bottom: 0;">Learning Analytics</div>
@@ -1890,7 +1965,7 @@
                         </svg>
                         DOWNLOAD MY DATA
                     </button>
-                </div>
+                </div >
 
                 <div class="analytics-grid">
                     <div class="stat-card" style="grid-column: 1 / -1; display: flex; flex-direction: row; align-items: center; justify-content: space-between; gap: 20px;">
@@ -1966,21 +2041,21 @@
                 const row = document.createElement('div');
                 row.className = 'analytics-subject-row';
                 row.innerHTML = `
-                    <div class="analytics-subject-info">
+                < div class="analytics-subject-info" >
                         <div class="analytics-subject-name">${s}</div>
                         <div class="analytics-subject-stats">
                             ${stats.complete} Complete &middot; ${stats.partial} Partial &middot; ${stats.starred} Starred &middot; ${stats.total} Total
                         </div>
+                    </div >
+                <div style="width: 150px">
+                    <div class="progress-container" style="height: 6px">
+                        <div class="progress-bar complete" style="width: ${(stats.complete / stats.total) * 100}%"></div>
                     </div>
-                    <div style="width: 150px">
-                        <div class="progress-container" style="height: 6px">
-                            <div class="progress-bar complete" style="width: ${(stats.complete / stats.total) * 100}%"></div>
-                        </div>
-                        <div class="progress-container" style="height: 6px; margin-top: 4px;">
-                            <div class="progress-bar partial" style="width: ${(stats.partial / stats.total) * 100}%"></div>
-                        </div>
+                    <div class="progress-container" style="height: 6px; margin-top: 4px;">
+                        <div class="progress-bar partial" style="width: ${(stats.partial / stats.total) * 100}%"></div>
                     </div>
-                `;
+                </div>
+            `;
                 breakdown.appendChild(row);
             });
 
@@ -1999,7 +2074,7 @@
             localStorage.setItem('gateStars', JSON.stringify(stars));
 
             // Update UI
-            const btn = document.querySelector(`#q-card-${postId} .star-btn`);
+            const btn = document.querySelector(`#q - card - ${postId} .star - btn`);
             if (btn) {
                 btn.classList.toggle('active');
                 btn.innerHTML = stars[postId]
@@ -2016,22 +2091,22 @@
         }
 
         function showAddTag(postId) {
-            const container = document.getElementById(`tags-container-${postId}`);
+            const container = document.getElementById(`tags - container - ${postId} `);
             const btn = container.querySelector('.add-tag-btn');
             btn.style.display = 'none';
 
             const inputContainer = document.createElement('div');
             inputContainer.className = 'tag-input-container';
             inputContainer.innerHTML = `
-                <input type="text" class="tag-input" id="tag-input-${postId}" placeholder="New tag..." autocomplete="off">
-                <div class="tag-suggestions" id="tag-suggestions-${postId}"></div>
+                < input type = "text" class="tag-input" id = "tag-input-${postId}" placeholder = "New tag..." autocomplete = "off" >
+                    <div class="tag-suggestions" id="tag-suggestions-${postId}"></div>
             `;
             container.appendChild(inputContainer);
 
-            const input = document.getElementById(`tag-input-${postId}`);
+            const input = document.getElementById(`tag - input - ${postId} `);
             input.focus();
 
-            const suggestions = document.getElementById(`tag-suggestions-${postId}`);
+            const suggestions = document.getElementById(`tag - suggestions - ${postId} `);
             const allTags = getAllUsedTags();
 
             const showSuggestions = (filter = '') => {
@@ -2040,7 +2115,7 @@
                     : allTags;
 
                 if (filtered.length > 0) {
-                    suggestions.innerHTML = filtered.map(t => `<div class="tag-suggestion-item" onclick="addTag('${postId}', '${t}')">${t}</div>`).join('');
+                    suggestions.innerHTML = filtered.map(t => `< div class="tag-suggestion-item" onclick = "addTag('${postId}', '${t}')" > ${t}</div > `).join('');
                     suggestions.style.display = 'block';
                 } else {
                     suggestions.style.display = 'none';
@@ -2065,7 +2140,7 @@
             // Blur handling with delay to allow clicking suggestions
             input.onblur = () => {
                 setTimeout(() => {
-                    if (document.getElementById(`tag-input-${postId}`)) {
+                    if (document.getElementById(`tag - input - ${postId} `)) {
                         renderTags(postId);
                     }
                 }, 200);
@@ -2115,8 +2190,8 @@
 
             const currentValue = dropdown.value;
             dropdown.innerHTML = `
-                <option value="all">🏷️ All Tags (${examData.total_qs})</option>
-                <option value="starred" ${currentValue === 'starred' ? 'selected' : ''}>⭐ Starred (${starredCount})</option>
+                < option value = "all" >🏷️ All Tags(${examData.total_qs})</option >
+                    <option value="starred" ${currentValue === 'starred' ? 'selected' : ''}>⭐ Starred (${starredCount})</option>
                 ${sortedTags.map(t => `<option value="${t}" ${t === currentValue ? 'selected' : ''}>${t} (${tagCounts[t]})</option>`).join('')}
             `;
 
@@ -2160,7 +2235,7 @@
         function renderTags(postId) {
             const tagsData = JSON.parse(localStorage.getItem('gateTags') || '{}');
             const tags = tagsData[postId] || [];
-            const container = document.getElementById(`tags-container-${postId}`);
+            const container = document.getElementById(`tags - container - ${postId} `);
 
             container.innerHTML = `
                 ${tags.map(t => `
@@ -2168,8 +2243,9 @@
                         ${t}
                         <span class="tag-remove" onclick="removeTag('${postId}', '${t}')">&times;</span>
                     </div>
-                `).join('')}
-                <button class="add-tag-btn" onclick="showAddTag('${postId}')">+ Tag</button>
+                `).join('')
+                }
+            <button class="add-tag-btn" onclick="showAddTag('${postId}')">+ Tag</button>
             `;
         }
 
@@ -2280,9 +2356,9 @@
 
         // --- AI Feature ---
         async function askAI(postId) {
-            const aiArea = document.getElementById(`ai-area-${postId}`);
-            const aiContent = document.getElementById(`ai-content-${postId}`);
-            const btn = document.getElementById(`btn-ai-${postId}`);
+            const aiArea = document.getElementById(`ai - area - ${postId} `);
+            const aiContent = document.getElementById(`ai - content - ${postId} `);
+            const btn = document.getElementById(`btn - ai - ${postId} `);
 
             // Toggle if already visible
             if (aiArea.style.display === 'block') {
@@ -2321,21 +2397,21 @@
             aiContent.innerHTML = '<div class="spinner" style="width: 20px; height: 20px; border-width: 2px;"></div> Generating solution...';
 
             // Construct Prompt
-            const questionText = document.querySelector(`#q-card-${postId} .q-body`).innerText;
+            const questionText = document.querySelector(`#q - card - ${postId} .q - body`).innerText;
             const propmt = `
-You are an expert Computer Science tutor helping a student with GATE (Graduate Aptitude Test in Engineering) questions.
-Please provide a detailed, step-by-step solution for the following question. 
+You are an expert Computer Science tutor helping a student with GATE(Graduate Aptitude Test in Engineering) questions.
+Please provide a detailed, step - by - step solution for the following question. 
 Explain the concepts involved clearly.
 
-Question:
+                Question:
 ${questionText}
 
 Format Requirements:
-1. Use HTML tags for structure (<h3>, <p>, <ul>, <li>, <strong>, etc.).
-2. Do NOT use markdown (e.g., no # headers or * bold).
-3. For mathematical equations, use LaTeX syntax enclosed in single dollar signs for inline math (e.g., $x^2$) and double dollar signs for display math (e.g., $$x^2$$).
-4. Do not include <html>, <head>, or <body> tags.
-`;
+            1. Use HTML tags for structure(<h3>, <p>, <ul>, <li>, <strong>, etc.).
+                2. Do NOT use markdown (e.g., no # headers or * bold).
+                3. For mathematical equations, use LaTeX syntax enclosed in single dollar signs for inline math (e.g., $x^2$) and double dollar signs for display math (e.g., $$x^2$$).
+                4. Do not include <html>, <head>, or <body> tags.
+                    `;
 
             try {
                 const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`, {
