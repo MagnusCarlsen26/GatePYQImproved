@@ -695,6 +695,18 @@
             border-radius: 8px;
         }
 
+        .q-body img,
+        .ans-area img,
+        .ai-area img,
+        .option-content img,
+        .explanation-content img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+            margin: 10px 0;
+            display: block;
+        }
+
         /* --- Options Styling --- */
         .options-container {
             display: grid;
@@ -1155,6 +1167,7 @@
         let currentFilter = 'all'; // 'all', 'starred', 'complete', 'partial', 'none'
         let currentTagFilter = 'all';
         let currentSectionFilter = 'all';
+        let currentSortOrder = 'desc'; // 'asc' or 'desc'
 
         function abbreviate(text, type) {
             if (type === 'subject') {
@@ -1599,6 +1612,10 @@
                         <select id="tag-filter-dropdown" class="tag-filter-select" onchange="setTagFilter(this.value)">
                             <option value="all">🏷️ All Tags</option>
                         </select>
+                        <select id="sort-order-dropdown" class="tag-filter-select" onchange="setSortOrder(this.value)">
+                            <option value="desc">📅 Newest First</option>
+                            <option value="asc">📅 Oldest First</option>
+                        </select>
                     </div>
                 </div>
                 <div id="questions-list"></div>
@@ -1687,6 +1704,11 @@
             renderQuestions();
         }
 
+        function setSortOrder(order) {
+            currentSortOrder = order;
+            renderQuestions();
+        }
+
         function renderQuestions() {
             const qList = document.getElementById('questions-list');
             if (!qList) return;
@@ -1745,8 +1767,12 @@
                     return matchesStatus && matchesTag;
                 });
 
-                // Sort by year descending (newest first)
-                filteredQuestions.sort((a, b) => (b.year || 0) - (a.year || 0));
+                // Sort by year
+                filteredQuestions.sort((a, b) => {
+                    const yearA = parseInt(a.year) || 0;
+                    const yearB = parseInt(b.year) || 0;
+                    return currentSortOrder === 'desc' ? yearB - yearA : yearA - yearB;
+                });
 
                 if (filteredQuestions.length > 0) {
                     // Only show section header if viewing all sections
